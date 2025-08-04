@@ -127,6 +127,3 @@ When contributing to this project, please ensure:
 4. All interactive elements are keyboard accessible
 5. Animations can be paused or disabled
 
-## License
-
-This project is licensed under the MIT License. 
