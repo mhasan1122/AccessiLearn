@@ -1,11 +1,23 @@
 import { useEffect } from 'react';
-import { View, Text, TouchableOpacity, StatusBar, Animated, ImageBackground, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StatusBar, Animated, ImageBackground, Image, Modal, ScrollView, Dimensions, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
 import Header from '../components/Header';
-import AccessibilityMenu from '../components/AccessibilityMenu';
-import { loadAccessibilitySettings } from '../store/accessibilitySlice';
+import { 
+  loadAccessibilitySettings, 
+  toggleMenu, 
+  toggleDarkMode, 
+  toggleContrast, 
+  toggleBiggerText, 
+  toggleTextSpacing, 
+  togglePauseAnimations, 
+  toggleDyslexia, 
+  toggleCursor, 
+  toggleTextAlign, 
+  increaseLineHeight, 
+  resetAllAccessibility 
+} from '../store/accessibilitySlice';
 
 export default function MainScreen() {
   const dispatch = useAppDispatch();
@@ -20,7 +32,8 @@ export default function MainScreen() {
     textSpacing,
     pauseAnimations,
     dyslexia,
-    cursor
+    cursor,
+    isMenuOpen
   } = useAppSelector((state) => state.accessibility);
 
   const fadeAnim = new Animated.Value(1);
@@ -83,7 +96,7 @@ export default function MainScreen() {
   };
 
   const getFontFamily = () => {
-    return dyslexia ? 'System' : 'System';
+    return dyslexia ? 'Arial' : 'System';
   };
 
   const animateTransition = () => {
@@ -105,7 +118,7 @@ export default function MainScreen() {
 
   useEffect(() => {
     animateTransition();
-  }, [darkMode, contrast, biggerText]);
+  }, [darkMode, contrast, biggerText, textAlign, dyslexia, cursor]);
 
   return (
     <View className="flex-1">
@@ -120,7 +133,7 @@ export default function MainScreen() {
           className="flex-1"
           style={{
             backgroundColor: darkMode
-              ? 'rgba(0, 0, 0, 0.4)'
+              ? 'rgba(0, 0, 0, 0.6)'
               : 'rgba(255, 255, 255, 0.3)'
           }}
         >
@@ -128,7 +141,10 @@ export default function MainScreen() {
 
         <Animated.View 
           className="flex-1 justify-center px-6"
-          style={{ opacity: fadeAnim }}
+          style={{ 
+            opacity: fadeAnim,
+            cursor: cursor ? 'pointer' : 'auto'
+          }}
         >
           {/* Logo and Brand */}
           <View className="flex-row items-center mb-16">
@@ -144,7 +160,7 @@ export default function MainScreen() {
                 fontFamily: getFontFamily(),
                 lineHeight: lineHeight * 20,
                 letterSpacing: textSpacing ? letterSpacing + 1 : letterSpacing,
-                textAlign: 'left',
+                textAlign: textAlign,
               }}
               accessibilityLabel="LiftUP AI Logo"
             >
@@ -163,7 +179,7 @@ export default function MainScreen() {
                   fontFamily: getFontFamily(),
                   lineHeight: lineHeight * 20,
                   letterSpacing: textSpacing ? letterSpacing + 1 : letterSpacing,
-                  textAlign: 'left',
+                  textAlign: textAlign,
                 }}
                 accessibilityLabel="Welcome message"
               >
@@ -179,7 +195,7 @@ export default function MainScreen() {
                   fontFamily: getFontFamily(),
                   lineHeight: lineHeight * 20,
                   letterSpacing: textSpacing ? letterSpacing + 1 : letterSpacing,
-                  textAlign: 'left',
+                  textAlign: textAlign,
                 }}
                 accessibilityLabel="LiftUP AI brand name"
               >
@@ -193,7 +209,7 @@ export default function MainScreen() {
                   fontFamily: getFontFamily(),
                   lineHeight: lineHeight * 20,
                   letterSpacing: textSpacing ? letterSpacing + 1 : letterSpacing,
-                  textAlign: 'left',
+                  textAlign: textAlign,
                 }}
                 accessibilityLabel="App description"
               >
@@ -222,12 +238,16 @@ export default function MainScreen() {
                 elevation: 8,
               }}
             >
-              <TouchableOpacity
-                className="flex-1 items-center justify-center"
-                accessibilityLabel="Get Started button"
-                accessibilityHint="Tap to begin using the app"
-                activeOpacity={0.8}
-              >
+                          <TouchableOpacity
+              className="flex-1 items-center justify-center"
+              accessibilityLabel="Get Started button"
+              accessibilityHint="Tap to begin using the app"
+              activeOpacity={0.8}
+              style={{
+                cursor: cursor ? 'pointer' : 'auto',
+                transform: cursor ? [{ scale: 1.05 }] : [{ scale: 1 }]
+              }}
+            >
                 <Text
                   className="text-white font-semibold text-lg"
                   style={{
@@ -244,7 +264,7 @@ export default function MainScreen() {
             <TouchableOpacity
               className="items-center justify-center"
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.95)',
                 borderRadius: 24,
                 width: 360,
                 height: 48,
@@ -256,6 +276,10 @@ export default function MainScreen() {
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
                 elevation: 3,
+                borderWidth: darkMode ? 1 : 0,
+                borderColor: darkMode ? 'rgba(255, 255, 255, 0.3)' : 'transparent',
+                cursor: cursor ? 'pointer' : 'auto',
+                transform: cursor ? [{ scale: 1.05 }] : [{ scale: 1 }]
               }}
               accessibilityLabel="Log in button"
               accessibilityHint="Tap to log into your account"
@@ -266,7 +290,7 @@ export default function MainScreen() {
                 style={{
                   fontFamily: getFontFamily(),
                   fontSize: biggerText ? 18 : 16,
-                  color: '#374151',
+                  color: darkMode ? '#ffffff' : '#374151',
                 }}
               >
                 Log in
@@ -275,9 +299,294 @@ export default function MainScreen() {
           </View>
         </Animated.View>
 
-        <AccessibilityMenu />
         </View>
       </ImageBackground>
+
+      {/* Accessibility Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isMenuOpen}
+        onRequestClose={() => dispatch(toggleMenu())}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: darkMode ? '#1f2937' : '#ffffff' }]}>
+            {/* Handle bar for better UX */}
+            <View style={styles.handleBar}>
+              <View style={[styles.handle, { backgroundColor: darkMode ? '#6b7280' : '#d1d5db' }]} />
+            </View>
+            
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: getTextColor() }]}>
+                Accessibility Menu
+              </Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => dispatch(toggleMenu())}
+              >
+                <Text style={[styles.closeButtonText, { color: getSecondaryTextColor() }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView 
+              style={styles.modalScroll} 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+            >
+              <View style={styles.accessibilityGrid}>
+                {/* Row 1 */}
+                <AccessibilityButton
+                  icon={darkMode ? '☀️' : '🌙'}
+                  title="Dark Mode"
+                  onPress={() => dispatch(toggleDarkMode())}
+                  isActive={darkMode}
+                  theme={{ text: getTextColor(), background: darkMode ? '#111827' : '#f9fafb', primary: '#8b5cf6' }}
+                />
+                
+                <AccessibilityButton
+                  icon="👁️"
+                  title="High Contrast"
+                  onPress={() => dispatch(toggleContrast())}
+                  isActive={contrast}
+                  theme={{ text: getTextColor(), background: darkMode ? '#111827' : '#f9fafb', primary: '#8b5cf6' }}
+                />
+                
+                <AccessibilityButton
+                  icon="T+"
+                  title="Bigger Text"
+                  onPress={() => dispatch(toggleBiggerText())}
+                  isActive={biggerText}
+                  theme={{ text: getTextColor(), background: darkMode ? '#111827' : '#f9fafb', primary: '#8b5cf6' }}
+                />
+                
+                {/* Row 2 */}
+                <AccessibilityButton
+                  icon="↔"
+                  title="Text Spacing"
+                  onPress={() => dispatch(toggleTextSpacing())}
+                  isActive={textSpacing}
+                  theme={{ text: getTextColor(), background: darkMode ? '#111827' : '#f9fafb', primary: '#8b5cf6' }}
+                />
+                
+                <AccessibilityButton
+                  icon="⏸"
+                  title="Pause Animations"
+                  onPress={() => dispatch(togglePauseAnimations())}
+                  isActive={pauseAnimations}
+                  theme={{ text: getTextColor(), background: darkMode ? '#111827' : '#f9fafb', primary: '#8b5cf6' }}
+                />
+                
+                <AccessibilityButton
+                  icon="🧠"
+                  title="Dyslexia Font"
+                  onPress={() => dispatch(toggleDyslexia())}
+                  isActive={dyslexia}
+                  theme={{ text: getTextColor(), background: darkMode ? '#111827' : '#f9fafb', primary: '#8b5cf6' }}
+                />
+                
+                {/* Row 3 */}
+                <AccessibilityButton
+                  icon="↗"
+                  title="Large Cursor"
+                  onPress={() => dispatch(toggleCursor())}
+                  isActive={cursor}
+                  theme={{ text: getTextColor(), background: darkMode ? '#111827' : '#f9fafb', primary: '#8b5cf6' }}
+                />
+                
+                <AccessibilityButton
+                  icon={textAlign === 'center' ? '≡' : textAlign === 'right' ? '≡' : '≡'}
+                  title="Text Align"
+                  onPress={() => dispatch(toggleTextAlign())}
+                  isActive={textAlign !== 'left'}
+                  theme={{ text: getTextColor(), background: darkMode ? '#111827' : '#f9fafb', primary: '#8b5cf6' }}
+                />
+                
+                <AccessibilityButton
+                  icon="≡↕"
+                  title="Line Height"
+                  onPress={() => dispatch(increaseLineHeight())}
+                  isActive={lineHeight > 1.2}
+                  theme={{ text: getTextColor(), background: darkMode ? '#111827' : '#f9fafb', primary: '#8b5cf6' }}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.resetButton, { backgroundColor: '#8b5cf6' }]}
+                onPress={() => dispatch(resetAllAccessibility())}
+              >
+                <LinearGradient
+                  colors={['#8B5CF6', '#EC4899']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.resetButtonGradient}
+                >
+                  <Text style={styles.resetButtonText}>🔄 Reset All Accessibility</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
+
+interface AccessibilityButtonProps {
+  icon: string;
+  title: string;
+  onPress: () => void;
+  isActive: boolean;
+  theme: any;
+}
+
+function AccessibilityButton({ icon, title, onPress, isActive, theme }: AccessibilityButtonProps) {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.accessibilityButton,
+        {
+          backgroundColor: isActive ? theme.primary : theme.background,
+          borderColor: isActive ? theme.primary : theme.text,
+        },
+      ]}
+      onPress={onPress}
+      accessibilityLabel={title}
+      accessibilityHint={`Toggle ${title} accessibility feature`}
+      activeOpacity={0.7}
+    >
+      <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+        <Text style={{ 
+          fontSize: 20, 
+          color: isActive ? 'white' : theme.text,
+          marginBottom: 4
+        }}>
+          {icon}
+        </Text>
+        <Text
+          style={[
+            styles.buttonText,
+            {
+              color: isActive ? 'white' : theme.text,
+            },
+          ]}
+          numberOfLines={2}
+          adjustsFontSizeToFit={true}
+        >
+          {title}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+    maxHeight: Dimensions.get('window').height * 0.9,
+    minHeight: Dimensions.get('window').height * 0.6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  handleBar: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#d1d5db',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    fontSize: 18,
+    fontWeight: '500',
+  },
+  modalScroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  accessibilityGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    paddingHorizontal: 4,
+  },
+  accessibilityButton: {
+    width: (Dimensions.get('window').width - 80) / 3,
+    aspectRatio: 1,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    padding: 6,
+    marginBottom: 8,
+  },
+  buttonText: {
+    marginTop: 6,
+    fontSize: 11,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  resetButton: {
+    borderRadius: 25,
+    overflow: 'hidden',
+    marginTop: 8,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  resetButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    gap: 8,
+  },
+  resetButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
